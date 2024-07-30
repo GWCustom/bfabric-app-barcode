@@ -56,7 +56,7 @@ app.layout = html.Div(
                                 html.Div(
                                     children=[
                                         html.P(
-                                            'B-Fabric App Template',
+                                            'Barcode Manipulation Dashboard',
                                             style={'color':'#ffffff','margin-top':'15px','height':'80px','width':'100%',"font-size":"40px","margin-left":"20px"}
                                         )
                                     ],
@@ -69,7 +69,7 @@ app.layout = html.Div(
                 dbc.Row(
                     dbc.Col(
                         html.Div(
-                            children=[html.P(id="page-title",children=[str("Bfabric App Template")], style={"font-size":"40px", "margin-left":"20px", "margin-top":"10px"})],
+                            children=[html.P(id="page-title",children=[str("Barcode Manipulation Dashboard")], style={"font-size":"40px", "margin-left":"20px", "margin-top":"10px"})],
                             style={"margin-top":"0px", "min-height":"80px","height":"6vh","border-bottom":"2px solid #d4d7d9"}
                         )
                     )
