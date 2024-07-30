@@ -1,4 +1,7 @@
 import pandas as pd
+import bfabric
+
+BB = bfabric.Bfabric()
 
 def get_dataset(order_number, B):
 
@@ -109,9 +112,11 @@ def RS(barcode):
     else:
         return barcode
 
-def update_bfabric(df, B):
+def update_bfabric(df, B=None):
 
     print("STARTING")
+    if B is None:
+        B = BB
 
     errors = []
     ress = []
@@ -147,7 +152,7 @@ def update_bfabric(df, B):
             # objs.append({"id":str(ids[i+itr*100]),"barcode1dmx":str(bc1[i+itr*100]),"barcode2dmx":str(bc2[i+itr*100])})
 
         res = B.save_object(endpoint="sample", obj=objs)
-        # print(res)
+        print(res[0])
         # res = B.save_object(endpoint="sample", obj={"id":"0","barcode1dmx":str(bc1[i]),"barcode2dmx":str(bc2[i])})
         # ress.append(res)
         ress += res

@@ -163,7 +163,7 @@ def confirm(yes, no, data, sel, token):
             #     }
             # )
             wrapper = auth_utils.token_response_to_bfabric(json.loads(auth_utils.token_to_data(token)))
-            fns.update_bfabric(df, wrapper) 
+            fns.update_bfabric(df, None) 
 
             # if len(response[1]) != 0:
             header = html.H1("Bfabric Updating...Probably wait 2 min and then do what you gotta do. ",style={'color': 'red', 'fontSize': 40, 'textAlign':'center'})
