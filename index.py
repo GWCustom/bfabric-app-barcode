@@ -337,7 +337,7 @@ def load_new_table(load_reload, order_number, old, order, token):
 )
 def display_page(url_params):
     
-    base_title = "Bfabric App Template"
+    base_title = "Barcode Manipulation Dashboard"
 
     if not url_params:
         return None, None, None, components.no_auth, base_title, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True
