@@ -109,7 +109,7 @@ def RS(barcode):
     else:
         return barcode
 
-def update_bfabric(df):
+def update_bfabric(df, B):
 
     print("STARTING")
 

@@ -146,8 +146,9 @@ def selection(dat):
               inputs=[Input('yes', 'n_clicks'),
                       Input('no', 'n_clicks')],
               state=[State('edited', 'data'),
-                     State('selectedRows', 'data')])
-def confirm(yes, no, data, sel):
+                     State('selectedRows', 'data'),
+                     State('token', 'data')])
+def confirm(yes, no, data, sel, token):
     try:
         df = pd.read_json(data, orient='split')
         df = df.iloc[sel, :]
@@ -161,6 +162,8 @@ def confirm(yes, no, data, sel):
             #         "df":df,
             #     }
             # )
+            wrapper = auth_utils.token_response_to_bfabric(json.loads(auth_utils.token_to_data(token)))
+            fns.update_bfabric(df, wrapper) 
 
             # if len(response[1]) != 0:
             header = html.H1("Bfabric Updating...Probably wait 2 min and then do what you gotta do. ",style={'color': 'red', 'fontSize': 40, 'textAlign':'center'})
