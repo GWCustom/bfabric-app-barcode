@@ -125,11 +125,11 @@ app.layout = html.Div(
                 dcc.Store(id='token', storage_type='session'), # Where we store the actual token
                 dcc.Store(id='entity', storage_type='session'), # Where we store the entity data retrieved from bfabric
                 dcc.Store(id='token_data', storage_type='session'), # Where we store the token auth response
-                dcc.Store(id='original'),
-                dcc.Store(id='edited'),
-                dcc.Store(id='order-number'),
-                dcc.Store(id='selectedRows', data=[0]),
-                dcc.Store(id='dummy-trigger'),
+                dcc.Store(id='original', storage_type='session'),
+                dcc.Store(id='edited', storage_type='session'),
+                dcc.Store(id='order-number', storage_type='session'),
+                dcc.Store(id='selectedRows', data=[0], storage_type='session'),
+                dcc.Store(id='dummy-trigger', storage_type='session'),
             ],
         )
     ],style={"width":"100vw", "overflow-x":"hidden", "overflow-y":"scroll"}
