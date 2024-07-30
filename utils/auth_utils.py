@@ -95,6 +95,7 @@ def entity_data(token_data: dict) -> str:
         "createdby": xml.createdby, 
         "created": xml.created,
         "modified": xml.modified,
+        "name": xml.name,
         # . . . add additional attributes here which you want to save from the entity data
     })
     return json_data
