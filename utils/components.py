@@ -3,7 +3,7 @@ from dash import html, dcc
 import pandas as pd
 import dash_table
 
-DEVELOPER_EMAIL = "gwhite@fgcz.ethz.ch"
+DEVELOPER_EMAIL = "griffin@gwcustom.com"
 
 button_style = {"min-width":"100%","max-width":"100%","font-size":"20px"}
 

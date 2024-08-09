@@ -5,11 +5,19 @@ import json
 import pandas as pd
 import os
 import utils.bfab_utils as fns
+
 # import bfabric
 from utils import auth_utils, components
 
 from dash import callback_context as ctx
 import dash_table
+
+from worker import conn
+from rq import Queue
+
+from rq import Queue
+
+q = Queue(connection=conn)
 
 if os.path.exists("./PARAMS.py"):
     try:
@@ -154,21 +162,20 @@ def confirm(yes, no, data, sel, token):
         df = df.iloc[sel, :]
         button_clicked = ctx.triggered_id
         if button_clicked == 'yes' and yes > 0:
-            print("QUEUEING")
+            
             print(df)
-            # q.enqueue(
-            #     fns.update_bfabric, 
-            #     kwargs={
-            #         "df":df,
-            #     }
-            # )
-            wrapper = auth_utils.token_response_to_bfabric(json.loads(auth_utils.token_to_data(token)))
-            fns.update_bfabric(df, None) 
 
-            # if len(response[1]) != 0:
-            header = html.H1("Bfabric Updating...Probably wait 2 min and then do what you gotta do. ",style={'color': 'red', 'fontSize': 40, 'textAlign':'center'})
-
-            # os.system("rm temporary.csv")
+            if len(df) > 100:
+                q.enqueue(
+                    fns.update_bfabric, 
+                    kwargs={
+                        "df":df,
+                    }
+                )
+                header = html.H1("Bfabric updates have been queued. It can take up to 1 minute for changes to be reflected in bfabric. ",style={'color': 'red', 'fontSize': 40, 'textAlign':'center'})
+            else:
+                wrapper = auth_utils.token_response_to_bfabric(json.loads(auth_utils.token_to_data(token)))
+                fns.update_bfabric(df, None) 
 
         elif button_clicked == 'no':
             header = html.H1("Bfabric NOT Updated...Refresh page to continue",style={'color': 'white', 'fontSize': 40, 'textAlign':'center'})
