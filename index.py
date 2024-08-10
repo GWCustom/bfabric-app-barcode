@@ -5,6 +5,7 @@ import json
 import pandas as pd
 import os
 import utils.bfab_utils as fns
+from datetime import datetime as dt
 
 # import bfabric
 from utils import auth_utils, components
@@ -394,6 +395,7 @@ def load_new_table(load_reload, order_number, old, order, token):
         Output('yes', 'disabled'),
         Output('update', 'disabled'),
         Output('check', 'disabled'),
+        Output('session-details', 'children'),
     ],
     [
         Input('url', 'search'),
@@ -402,38 +404,56 @@ def load_new_table(load_reload, order_number, old, order, token):
 def display_page(url_params):
     
     base_title = "Barcode Manipulation Dashboard"
+    session_details = [html.P("No session details available")]
 
     if not url_params:
-        return None, None, None, components.no_auth, base_title, *(True for _ in range(14))
+        return None, None, None, components.no_auth, base_title, *(True for _ in range(14)), session_details
     
     token = "".join(url_params.split('token=')[1:])
     tdata_raw = auth_utils.token_to_data(token)
     
     if tdata_raw:
         if tdata_raw == "EXPIRED":
-            return None, None, None, components.expired, base_title, *(True for _ in range(14))
+            return None, None, None, components.expired, base_title, *(True for _ in range(14)), session_details
         else: 
             tdata = json.loads(tdata_raw)
     else:
-        return None, None, None, components.no_auth, base_title, *(True for _ in range(14))
+        return None, None, None, components.no_auth, base_title, *(True for _ in range(14)), session_details
     
     if tdata:
         entity_data = json.loads(auth_utils.entity_data(tdata))
         page_title = f"{base_title} - {tdata['entityClass_data']} - {entity_data['name']} ({tdata['environment']} System)" if tdata else "Bfabric App Interface"
 
         if not tdata:
-            return token, None, None, components.no_auth, page_title, *(True for _ in range(14))
+            return token, None, None, components.no_auth, page_title, *(True for _ in range(14)), session_details
         
         elif not entity_data:
-            return token, None, None, components.no_entity, page_title, *(True for _ in range(14))
+            return token, None, None, components.no_entity, page_title, *(True for _ in range(14)), session_details
         
         else:
             if not DEV:
-                return token, tdata, entity_data, components.auth, page_title, *(False for _ in range(14))
+                session_details = [
+                    html.P([
+                        html.B("Entity Name: "), entity_data['name'],
+                        html.Br(),
+                        html.B("Entity Class: "), tdata['entityClass_data'],
+                        html.Br(),
+                        html.B("Environment: "), tdata['environment'],
+                        html.Br(),
+                        html.B("Entity ID: "), tdata['entity_id_data'],
+                        html.Br(),
+                        html.B("User Name: "), tdata['user_data'],
+                        html.Br(),
+                        html.B("Session Expires: "), tdata['token_expires'],
+                        html.Br(),
+                        html.B("Current Time: "), str(dt.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    ])
+                ]
+                return token, tdata, entity_data, components.auth, page_title, *(False for _ in range(14)), session_details
             else: 
-                return token, tdata, entity_data, components.dev, page_title, *(True for _ in range(14))
+                return token, tdata, entity_data, components.dev, page_title, *(True for _ in range(14)), session_details
     else: 
-        return None, None, None, components.no_auth, base_title, *(True for _ in range(14))
+        return None, None, None, components.no_auth, base_title, *(True for _ in range(14)), session_details
 
 
 @app.callback(
