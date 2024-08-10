@@ -65,3 +65,21 @@ python3 index.py
 8) Check it out! 
 
 Visit http://localhost:8050 to see your site in action.
+
+## Notes for Production Deployment
+
+You can deploy this app by running 
+
+```
+python3 index.py
+```
+
+within a screen session (for example). But you'll also need to execute:
+
+```
+python3 worker.py
+```
+
+within a separte session. This will spawn a worker process which listens to the redis queue on localhost. 
+
+If redis is not running on the deployment server, you'll need to install it and set it up to run on localhost (on the default port 6379).
