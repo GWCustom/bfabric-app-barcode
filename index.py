@@ -60,7 +60,7 @@ app.layout = html.Div(
                 
                 dbc.Modal(
                     [
-                        dbc.ModalHeader(dbc.ModalTitle("Updated B-Fabric")),
+                        dbc.ModalHeader(dbc.ModalTitle("Update B-Fabric")),
                         dbc.ModalBody("Confirm barcode update in B-Fabric for selected samples?"),
                         dbc.ModalFooter(
                             dbc.Button(
