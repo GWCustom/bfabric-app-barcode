@@ -157,7 +157,7 @@ def update_bfabric(df, B=None):
         # ress.append(res)
         ress += res
         if "errorreport" in str(res[0]):
-            print("Recieved Error Report from Bfabric")
+            print("Recieved Error Report from B-Fabric")
             errors.append(str(ids[i]))
 
     return (ress, errors)

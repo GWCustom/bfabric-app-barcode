@@ -60,8 +60,8 @@ app.layout = html.Div(
                 
                 dbc.Modal(
                     [
-                        dbc.ModalHeader(dbc.ModalTitle("Updated Bfabric")),
-                        dbc.ModalBody("Confirm barcode update in bfabric for selected samples?"),
+                        dbc.ModalHeader(dbc.ModalTitle("Updated B-Fabric")),
+                        dbc.ModalBody("Confirm barcode update in B-Fabric for selected samples?"),
                         dbc.ModalFooter(
                             dbc.Button(
                                 "Confirm Update", id="yes", className="ms-auto", n_clicks=0
@@ -101,7 +101,7 @@ app.layout = html.Div(
                                     html.P(
                                         id="page-title",
                                         children=[
-                                            str("Barcode Manipulation Dashboard")
+                                            str(" ")
                                         ], 
                                         style={
                                             "font-size":"40px", 
@@ -403,7 +403,7 @@ def load_new_table(load_reload, order_number, old, order, token):
 )
 def display_page(url_params):
     
-    base_title = "Barcode Manipulation Dashboard"
+    base_title = ""
     session_details = [html.P("No session details available")]
 
     if not url_params:
@@ -422,7 +422,7 @@ def display_page(url_params):
     
     if tdata:
         entity_data = json.loads(auth_utils.entity_data(tdata))
-        page_title = f"{base_title} - {tdata['entityClass_data']} - {entity_data['name']} ({tdata['environment']} System)" if tdata else "Bfabric App Interface"
+        page_title = f"{base_title} - {tdata['entityClass_data']} - {entity_data['name']}" if tdata else "B-Fabric App Interface"
 
         if not tdata:
             return token, None, None, components.no_auth, page_title, *(True for _ in range(14)), session_details
