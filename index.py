@@ -422,7 +422,7 @@ def display_page(url_params):
     
     if tdata:
         entity_data = json.loads(auth_utils.entity_data(tdata))
-        page_title = f"{base_title} - {tdata['entityClass_data']} - {entity_data['name']}" if tdata else "B-Fabric App Interface"
+        page_title = f"{tdata['entityClass_data']} - {entity_data['name']}" if tdata else "B-Fabric App Interface"
 
         if not tdata:
             return token, None, None, components.no_auth, page_title, *(True for _ in range(14)), session_details
