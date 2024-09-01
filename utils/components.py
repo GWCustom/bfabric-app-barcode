@@ -44,22 +44,22 @@ default_sidebar = [
     html.P(),
     dbc.Button('check / uncheck all', id='check', n_clicks=0, style=button_style),
     html.P(),
-    dbc.Button('Update Bfabric', id='update', n_clicks=0, color='danger', style=button_style),
+    dbc.Button('Update B-Fabric', id='update', n_clicks=0, color='danger', style=button_style),
 ]
 
 no_auth = [
-    html.P("You are not currently logged into an active session. Please log into bfabric to continue:"),
-    html.A('Login to Bfabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
+    html.P("You are not currently logged into an active session. Please log into B-Fabric to continue:"),
+    html.A('Login to B-Fabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
 ]
 
 expired = [
-    html.P("Your session has expired. Please log into bfabric to continue:"),
-    html.A('Login to Bfabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
+    html.P("Your session has expired. Please log into B-Fabric to continue:"),
+    html.A('Login to B-Fabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
 ]
 
 no_entity = [
-    html.P("There was an error fetching the data for your entity. Please try accessing the applicaiton again from bfabric:"),
-    html.A('Login to Bfabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
+    html.P("There was an error fetching the data for your entity. Please try accessing the applicaiton again from B-Fabric:"),
+    html.A('Login to B-Fabric', href='https://fgcz-bfabric.uzh.ch/bfabric/')
 ]
 
 dev = [html.P("This page is under development. Please check back later."),html.Br(),html.A("email the developer for more details",href="mailto:"+DEVELOPER_EMAIL)]
@@ -96,7 +96,7 @@ alerts = [
     dcc.Loading(
         [
             dbc.Alert(
-                "Sample barcodes in bfabric have been updated",
+                "Sample barcodes in B-Fabric have been updated",
                 id="alert-fade",
                 dismissable=True,
                 is_open=False,
@@ -112,7 +112,7 @@ alerts = [
                 style={"max-width":"50vw", "margin":"10px"}
             ),
             dbc.Alert(
-                "An error occured while updating the barcodes in bfabric. Please try again.\n if the issue persists, please fill out and submit a bug report.",
+                "An error occured while updating the barcodes in B-Fabric. Please try again.\n if the issue persists, please fill out and submit a bug report.",
                 id="alert-fade-3",
                 dismissable=True,
                 color="danger",
@@ -235,7 +235,7 @@ docs_tab = dbc.Row(
                     children=[
                         html.H2("Welcome to The Barcode Dashboard"),
                         html.P([
-                            "This app serves as a user interface for updating barcodes of run samples within bfabric."
+                            "This app serves as a user interface for updating barcodes of run samples within B-Fabric."
                         ]),
                         html.Br(),
                         html.H4("Developer Info"),
@@ -249,14 +249,14 @@ docs_tab = dbc.Row(
                         html.P([
                             """
                             This app is designed to allow users to update the barcodes of samples
-                            in bfabric. """
+                            in B-Fabric. """
                         ]),
                         html.Br(),
                         html.P([
                             """
 
-                            This app communicates with the bfabric API to fetch and save data in bfabric.
-                            However the bfabric API currently does not support updating whitespace as barcodes.
+                            This app communicates with the B-Fabric API to fetch and save data in bfabric.
+                            However the B-Fabric API currently does not support updating whitespace as barcodes.
                             It is therfore impossible to set a barcode to an empty string, or a space (for instance). 
                             In cases where clearing out a barcode is imperative for successful demultiplexing, I reccomend 
                             setting the barcode to a placeholder value such as 'G', and then demultiplexing 
@@ -268,7 +268,7 @@ docs_tab = dbc.Row(
                             \n\n
                             The app uses in-memory storage to make it simple to reset the barcodes to their initial state (by simply refreshing the page).
                             However, this means that the app will not remember the state of the barcodes if the page is refreshed. 
-                            Only refresh the page after you have saved the barcodes in bfabric, or if you wish to reset the barcodes to their initial state.
+                            Only refresh the page after you have saved the barcodes in B-Fabric, or if you wish to reset the barcodes to their initial state.
                             """
                         ),
                         html.H4("Update Barcodes Tab"),
@@ -322,8 +322,8 @@ docs_tab = dbc.Row(
                             ), " Check or uncheck all rows.",
                             html.Br(),html.Br(),
                             html.B(
-                                "Update Bfabric --"
-                            ), " Update the barcodes of the selected rows in bfabric."
+                                "Update B-Fabric --"
+                            ), " Update the barcodes of the selected rows in B-Fabric."
                         ], style={"margin-left": "2vw"}),
                         html.Br(),            
                         ], style={"margin-left": "2vw"}),
@@ -381,8 +381,8 @@ report_bug_tab = dbc.Row(
 
 tabs = dbc.Tabs(
     [
-        dbc.Tab(docs_tab, label="Documentation"),
         dbc.Tab(tab3_content, label="Update Barcodes"),
+        dbc.Tab(docs_tab, label="Documentation"),
         dbc.Tab(report_bug_tab, label="Report a Bug"),
     ]
 )
