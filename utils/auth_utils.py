@@ -113,9 +113,14 @@ def send_bug_report(token_data, entity_data, description):
         sent_at: {datetime.datetime.now()} \n\n
     """
 
+    # mail = f"""
+    #     echo "{mail_string}" | mail -s "Bug Report" griffin@gwcustom.com
+    # """
+
     mail = f"""
-        echo "{mail_string}" | mail -s "Bug Report" griffin@gwcustom.com
+        echo "{mail_string}" | mail -s "Bug Report" gwtools@fgcz.system
     """
+
 
     print("MAIL STRING:")
     print(mail_string)
