@@ -1,4 +1,3 @@
-bfabric @ file:///home/gwhite/APPLICATIONS/bfabric-app-barcode/bfabricPy/dist/bfabric-0.13.7.tar.gz#sha256=0f82992de7ceaffe5e1647711b22c14100aff356dfeb1d68a097f8a4489cc729
 blinker==1.8.2
 certifi==2024.6.2
 charset-normalizer==3.3.2
