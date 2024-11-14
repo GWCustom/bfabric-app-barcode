@@ -348,22 +348,13 @@ def submit_bug_report(n_clicks, token, entity_data, bug_description):
                      State('order-number', 'data'),
                      State('token', 'data')])
 def load_new_table(load_reload, order_number, old, order, token):
-
     if token:
         tdata = json.loads(auth_utils.token_to_data(token))
     else: 
         return None
     wrapper = auth_utils.token_response_to_bfabric(tdata)
-    print("ORDER NUMBER") 
 
-    
-    print(order_number)
-
-    print("ORDER:")
-    print(order)
-
-
-    if type(order_number) != type(None) and type(order) != type(None):
+    if order_number is not None and order is not None:
         if load_reload <= 1 or int(order_number) != int(list(pd.read_json(order, orient='split')['order_number'])[0]):
             df = fns.get_dataset(order_number, wrapper)
             return df.to_json(date_format='iso', orient='split')
@@ -462,19 +453,18 @@ def display_page(url_params):
 )
 def startup_function(token): 
 
-    ids = []
     if token:
         token_data = json.loads(auth_utils.token_to_data(token))
     else: 
         return []
     Bfab = auth_utils.token_response_to_bfabric(token_data)
-    res = Bfab.read_object(endpoint="run", obj={"id":token_data['entity_id_data']})
-    orders = res[0].container
-    for elt in orders:
-        if elt._classname == "order":
-            ids.append(elt._id)
+    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']})
+    orders = [
+        item['id'] for item in res[0].get('container')
+        if item.get('classname') == 'order'
+    ]
         
-    return [{'label': elt, 'value': elt } for elt in ids]
+    return [{'label': f'Order {order_id}', 'value': order_id} for order_id in orders]
 
 
 @app.callback(output=Output('edited','data'),

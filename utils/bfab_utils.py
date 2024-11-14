@@ -1,75 +1,30 @@
 import pandas as pd
-import bfabric
-
-BB = bfabric.Bfabric()
 
 def get_dataset(order_number, B):
-
-    bc1s = []
-    bc2s = []
-    ids = []
-    names = []
-    tubeids = []
-
-    res, all_res = B.read_object(endpoint="sample", obj={"containerid":str(order_number)}, page=1), []
-
-    print(res)
-
-    next_page = 2
-    while res is not None and len(res):
-        all_res += res
-        try:
-            res = B.read_object(endpoint="sample", obj={"containerid":str(order_number)}, page=next_page)
-        except:
-            break
-        next_page += 1
-
-    samples = all_res
-    print(samples)
-    # for i in range(19999999999999999999999999999999999999999999999):
-    #     samples = B.read_object(endpoint="sample", obj={"containerid":str(order_number)}, page=str(i))
-    #     if type(samples) != type(None):
-    #         all_samples += samples
-    #     else:
-    #         break
-
-    # samples = all_samples
+    bc1s, bc2s, ids, names, tubeids = [], [], [], [], []
+    
+    results = B.read(endpoint="sample", obj={"containerid": str(order_number)}, max_results=None)
+    samples = results.get_first_n_results(None)
 
     for sample in samples:
-        # if sample.type == "Library - Illumina" or sample.type == "User Library in Pool":
-        if sample.type == "Library on Run - Illumina":
-            ids.append(sample._id)
-
-            try:
-                tubeids.append(sample.tubeid)
-            except:
-                tubeids.append(None)
-            try:
-                names.append(sample.name)
-            except:
-                names.append(None)
-            try:
-                bc1s.append(sample.multiplexiddmx)
-            except:
-                bc1s.append(None)
-            try:
-                bc2s.append(sample.multiplexid2dmx)
-            except:
-                bc2s.append(None)
-        else:
-            continue
+        if sample.get('type') in ["Library on Run - Illumina"]:
+            ids.append(sample.get('id'))
+            tubeids.append(sample.get('tubeid'))
+            names.append(sample.get('name'))
+            bc1s.append(sample.get('multiplexiddmx', None))
+            bc2s.append(sample.get('multiplexid2dmx', None))
 
     final = pd.DataFrame({
-        "Sample ID":ids,
-        "Tube ID":tubeids,
-        "Name":names,
-        "Barcode 1":bc1s,
-        "Barcode 2":bc2s
+        "Sample ID": ids,
+        "Tube ID": tubeids,
+        "Name": names,
+        "Barcode 1": bc1s,
+        "Barcode 2": bc2s
     })
     final = final.sort_values(by=['Sample ID'], ascending=True)
-    # print(final)
 
     return final
+
 
 
 def RC(barcode):
@@ -151,9 +106,9 @@ def update_bfabric(df, B=None):
             
             # objs.append({"id":str(ids[i+itr*100]),"barcode1dmx":str(bc1[i+itr*100]),"barcode2dmx":str(bc2[i+itr*100])})
 
-        res = B.save_object(endpoint="sample", obj=objs)
-        print(res[0])
-        # res = B.save_object(endpoint="sample", obj={"id":"0","barcode1dmx":str(bc1[i]),"barcode2dmx":str(bc2[i])})
+        res = B.save(endpoint="sample", obj=objs)
+        print(res)
+        # res = B.save(endpoint="sample", obj={"id":"0","barcode1dmx":str(bc1[i]),"barcode2dmx":str(bc2[i])})
         # ress.append(res)
         ress += res
         if "errorreport" in str(res[0]):
