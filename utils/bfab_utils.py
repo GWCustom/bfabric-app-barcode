@@ -69,6 +69,12 @@ def RS(barcode):
 
 def update_bfabric(df, B=None):
 
+    print("DATAFRAME:")
+    print(df)
+    print("")
+    print("COLUMNS:")
+    print(df.columns)
+
     ress = []
     ids = list(df['Sample ID'])
 
