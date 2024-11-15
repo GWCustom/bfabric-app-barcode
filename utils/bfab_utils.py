@@ -69,29 +69,16 @@ def RS(barcode):
 
 def update_bfabric(df, B=None):
 
-    print("STARTING")
-    if B is None:
-        B = BB
-
-    errors = []
     ress = []
     ids = list(df['Sample ID'])
 
-    print(ids)
     bc1 = [str(i) if type(i) != type(0.1) else "" for i in list(df['Barcode 1'])]
     bc2 = [str(i) if type(i) != type(0.1) else "" for i in list(df['Barcode 2'])]
-    # Remove Whitespace #
     bc1 = [''.join(sentence.split()) for sentence in bc1]
-    # print(bc1)
     bc2 = [''.join(sentence.split()) for sentence in bc2]
-    # print(bc2) 
     n_itr = (len(ids) // 100) + 1
 
-    print(n_itr)
-
-    # for i in range(len(ids)):
     for itr in range(n_itr):
-        # print("ITR: " + str(itr) + " of " + str(n_itr))
         objs = []
         for i in range(100):
             if i+itr*100 >= len(ids):
@@ -104,15 +91,10 @@ def update_bfabric(df, B=None):
                 }
             )
             
-            # objs.append({"id":str(ids[i+itr*100]),"barcode1dmx":str(bc1[i+itr*100]),"barcode2dmx":str(bc2[i+itr*100])})
-
         res = B.save(endpoint="sample", obj=objs)
-        print(res)
-        # res = B.save(endpoint="sample", obj={"id":"0","barcode1dmx":str(bc1[i]),"barcode2dmx":str(bc2[i])})
-        # ress.append(res)
         ress += res
-        if "errorreport" in str(res[0]):
-            print("Recieved Error Report from B-Fabric")
-            errors.append(str(ids[i]))
 
-    return (ress, errors)
+        if "errorreport" in str(res[0]):
+            raise Exception(f"Error in updating B-Fabric: {res[0]}")
+
+    return ress

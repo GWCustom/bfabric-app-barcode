@@ -7,18 +7,13 @@ import os
 import utils.bfab_utils as fns
 from datetime import datetime as dt
 
-# import bfabric
+import bfabric
 from utils import auth_utils, components
 
 from dash import callback_context as ctx
 import dash_table
 
 from worker import conn
-from rq import Queue
-
-from rq import Queue
-
-q = Queue(name='barcodes', connection=conn, default_timeout=60*60)
 
 if os.path.exists("./PARAMS.py"):
     try:
@@ -171,21 +166,14 @@ def confirm(yes, data, sel, token):
 
         if button_clicked == 'yes' and yes > 0:
 
-            if len(df) > 100:
-                q.enqueue(
-                    fns.update_bfabric, 
-                    kwargs={
-                        "df":df,
-                    }
-                )
-                queued = True
+            # Here we update using the gfeeder credentials, since the user rarely has 
+            # Sufficient permissions to edit the objects. 
+            SUPERUSER = bfabric.Bfabric.from_config()
 
-            else:
-                fns.update_bfabric(df, None) 
-                updated = True
+            fns.update_bfabric(df, SUPERUSER) 
+            updated = True
                 
     except: 
-    # else:
         not_updated = True
 
     return updated, queued, not_updated
@@ -223,8 +211,6 @@ def display_graph(data, update_button, another, check):
             )
 
     button_clicked = ctx.triggered_id
-
-    print(another)
 
     if button_clicked == "check":
         if type(another) == type(None):
@@ -271,18 +257,6 @@ def display_graph(data, update_button, another, check):
     if button_clicked != "update":
         return send
     else:
-        # header = html.Div(
-        #     id="AreYouSure",
-        #     children=[
-        #         html.H4("Are you sure you want to update bfabric? (only selected samples will be updated)"),
-        #         dbc.Button('Update', id='yes', n_clicks=0, color='warning'),
-        #         dbc.Button('Cancel', id='no', n_clicks=0, color='secondary'),
-        #         html.Br(),
-        #         html.P(),
-        #         send
-        #     ]
-        # )
-        # return header
         return []
 
 
