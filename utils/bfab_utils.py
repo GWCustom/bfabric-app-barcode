@@ -67,15 +67,7 @@ def RS(barcode):
     else:
         return barcode
 
-def update_bfabric(df, B=None):
-
-    print("DATAFRAME:")
-    print(df)
-    print("")
-    print("COLUMNS:")
-    print(df.columns)
-
-    df.to_csv("temp.csv", index=False)
+async def update_bfabric(df, B=None):
 
     ress = []
     ids = list(df['Sample ID'])
@@ -87,6 +79,7 @@ def update_bfabric(df, B=None):
     n_itr = (len(ids) // 100) + 1
 
     for itr in range(n_itr):
+        print(f"Updating {itr*100} to {(itr+1)*100} samples")
         objs = []
         for i in range(100):
             if i+itr*100 >= len(ids):
