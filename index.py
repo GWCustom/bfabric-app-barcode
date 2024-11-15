@@ -454,7 +454,7 @@ def startup_function(token):
     else: 
         return []
     Bfab = auth_utils.token_response_to_bfabric(token_data)
-    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']})
+    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
     orders = [
         item['id'] for item in res[0].get('container')
         if item.get('classname') == 'order'
