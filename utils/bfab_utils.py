@@ -75,6 +75,8 @@ def update_bfabric(df, B=None):
     print("COLUMNS:")
     print(df.columns)
 
+    df.to_csv("temp.csv", index=False)
+
     ress = []
     ids = list(df['Sample ID'])
 
