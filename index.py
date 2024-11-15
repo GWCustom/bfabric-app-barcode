@@ -171,7 +171,10 @@ def confirm(yes, data, sel, token):
             fns.update_bfabric(df, SUPERUSER) 
             updated = True
                 
-    except: 
+    except Exception as e:
+        print("-----------ERROR-----------")
+        print(e) 
+        
         not_updated = True
 
     return updated, queued, not_updated
