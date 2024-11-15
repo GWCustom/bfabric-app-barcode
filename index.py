@@ -153,6 +153,9 @@ def toggle_modal(n1, n2, is_open):
 def confirm(yes, data, sel, token):
 
     updated, queued, not_updated = False, False, False
+    token_data = json.loads(auth_utils.token_to_data(token))
+    environ = token_data.get('environment', 'TEST') 
+    environ = environ.upper()
 
     if not data:
         return not_updated, queued, updated
@@ -166,7 +169,7 @@ def confirm(yes, data, sel, token):
 
             # Here we update using the gfeeder credentials, since the user rarely has 
             # Sufficient permissions to edit the objects. 
-            SUPERUSER = bfabric.Bfabric.from_config()
+            SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
             fns.update_bfabric(df, SUPERUSER) 
             updated = True
@@ -174,7 +177,7 @@ def confirm(yes, data, sel, token):
     except Exception as e:
         print("-----------ERROR-----------")
         print(e) 
-        
+
         not_updated = True
 
     return updated, queued, not_updated
