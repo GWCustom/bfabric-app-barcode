@@ -7,18 +7,14 @@ import os
 import utils.bfab_utils as fns
 from datetime import datetime as dt
 
-# import bfabric
+import bfabric
 from utils import auth_utils, components
 
 from dash import callback_context as ctx
 import dash_table
 
-from worker import conn
-from rq import Queue
-
-from rq import Queue
-
-q = Queue(name='barcodes', connection=conn, default_timeout=60*60)
+import asyncio
+import threading
 
 if os.path.exists("./PARAMS.py"):
     try:
@@ -32,6 +28,18 @@ else:
     HOST = 'localhost'
     DEV = True
     
+
+def run_async_in_background(coroutine_func, *args):
+    def start_loop(loop):
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    new_loop = asyncio.new_event_loop()
+    t = threading.Thread(target=start_loop, args=(new_loop,))
+    t.start()
+
+    future = asyncio.run_coroutine_threadsafe(coroutine_func(*args), new_loop)
+    return future
 
 ####### Main components of a Dash App: ########
 # 1) app (dash.Dash())
@@ -160,6 +168,9 @@ def toggle_modal(n1, n2, is_open):
 def confirm(yes, data, sel, token):
 
     updated, queued, not_updated = False, False, False
+    token_data = json.loads(auth_utils.token_to_data(token))
+    environ = token_data.get('environment', 'TEST') 
+    environ = environ.upper()
 
     if not data:
         return not_updated, queued, updated
@@ -171,21 +182,20 @@ def confirm(yes, data, sel, token):
 
         if button_clicked == 'yes' and yes > 0:
 
-            if len(df) > 100:
-                q.enqueue(
-                    fns.update_bfabric, 
-                    kwargs={
-                        "df":df,
-                    }
-                )
-                queued = True
+            # Here we update using the gfeeder credentials, since the user rarely has 
+            # Sufficient permissions to edit the objects. 
+            SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
-            else:
-                fns.update_bfabric(df, None) 
-                updated = True
+            # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
+            # asyncio.run(fns.update_bfabric(df, SUPERUSER))
+            run_async_in_background(fns.update_bfabric, df, SUPERUSER)
+            # fns.update_bfabric(df, SUPERUSER) 
+            updated = True
                 
-    except: 
-    # else:
+    except Exception as e:
+        print("-----------ERROR-----------")
+        print(e) 
+
         not_updated = True
 
     return updated, queued, not_updated
@@ -223,8 +233,6 @@ def display_graph(data, update_button, another, check):
             )
 
     button_clicked = ctx.triggered_id
-
-    print(another)
 
     if button_clicked == "check":
         if type(another) == type(None):
@@ -271,18 +279,6 @@ def display_graph(data, update_button, another, check):
     if button_clicked != "update":
         return send
     else:
-        # header = html.Div(
-        #     id="AreYouSure",
-        #     children=[
-        #         html.H4("Are you sure you want to update bfabric? (only selected samples will be updated)"),
-        #         dbc.Button('Update', id='yes', n_clicks=0, color='warning'),
-        #         dbc.Button('Cancel', id='no', n_clicks=0, color='secondary'),
-        #         html.Br(),
-        #         html.P(),
-        #         send
-        #     ]
-        # )
-        # return header
         return []
 
 
@@ -348,22 +344,13 @@ def submit_bug_report(n_clicks, token, entity_data, bug_description):
                      State('order-number', 'data'),
                      State('token', 'data')])
 def load_new_table(load_reload, order_number, old, order, token):
-
     if token:
         tdata = json.loads(auth_utils.token_to_data(token))
     else: 
         return None
     wrapper = auth_utils.token_response_to_bfabric(tdata)
-    print("ORDER NUMBER") 
 
-    
-    print(order_number)
-
-    print("ORDER:")
-    print(order)
-
-
-    if type(order_number) != type(None) and type(order) != type(None):
+    if order_number is not None and order is not None:
         if load_reload <= 1 or int(order_number) != int(list(pd.read_json(order, orient='split')['order_number'])[0]):
             df = fns.get_dataset(order_number, wrapper)
             return df.to_json(date_format='iso', orient='split')
@@ -462,19 +449,18 @@ def display_page(url_params):
 )
 def startup_function(token): 
 
-    ids = []
     if token:
         token_data = json.loads(auth_utils.token_to_data(token))
     else: 
         return []
     Bfab = auth_utils.token_response_to_bfabric(token_data)
-    res = Bfab.read_object(endpoint="run", obj={"id":token_data['entity_id_data']})
-    orders = res[0].container
-    for elt in orders:
-        if elt._classname == "order":
-            ids.append(elt._id)
+    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
+    orders = [
+        item['id'] for item in res[0].get('container')
+        if item.get('classname') == 'order'
+    ]
         
-    return [{'label': elt, 'value': elt } for elt in ids]
+    return [{'label': f'Order {order_id}', 'value': order_id} for order_id in orders]
 
 
 @app.callback(output=Output('edited','data'),
