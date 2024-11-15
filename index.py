@@ -13,8 +13,6 @@ from utils import auth_utils, components
 from dash import callback_context as ctx
 import dash_table
 
-from worker import conn
-
 if os.path.exists("./PARAMS.py"):
     try:
         from PARAMS import PORT, HOST, DEV
