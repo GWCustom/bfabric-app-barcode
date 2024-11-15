@@ -14,6 +14,7 @@ from dash import callback_context as ctx
 import dash_table
 
 import asyncio
+import threading
 
 if os.path.exists("./PARAMS.py"):
     try:
@@ -27,6 +28,18 @@ else:
     HOST = 'localhost'
     DEV = True
     
+
+def run_async_in_background(coroutine_func, *args):
+    def start_loop(loop):
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    new_loop = asyncio.new_event_loop()
+    t = threading.Thread(target=start_loop, args=(new_loop,))
+    t.start()
+
+    future = asyncio.run_coroutine_threadsafe(coroutine_func(*args), new_loop)
+    return future
 
 ####### Main components of a Dash App: ########
 # 1) app (dash.Dash())
@@ -174,8 +187,8 @@ def confirm(yes, data, sel, token):
             SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
             # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
-            asyncio.run(fns.update_bfabric(df, SUPERUSER))
-
+            # asyncio.run(fns.update_bfabric(df, SUPERUSER))
+            run_async_in_background(fns.update_bfabric, df, SUPERUSER)
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
                 
