@@ -171,7 +171,10 @@ def confirm(yes, data, sel, token):
             # Sufficient permissions to edit the objects. 
             SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
-            fns.update_bfabric(df, SUPERUSER) 
+            # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
+            fns.update_bfabric(df, SUPERUSER)
+
+            # fns.update_bfabric(df, SUPERUSER) 
             updated = True
                 
     except Exception as e:
