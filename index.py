@@ -13,6 +13,8 @@ from utils import auth_utils, components
 from dash import callback_context as ctx
 import dash_table
 
+import asyncio
+
 if os.path.exists("./PARAMS.py"):
     try:
         from PARAMS import PORT, HOST, DEV
@@ -172,7 +174,7 @@ def confirm(yes, data, sel, token):
             SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
             # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
-            fns.update_bfabric(df, SUPERUSER)
+            asyncio.run(fns.update_bfabric(df, SUPERUSER))
 
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
