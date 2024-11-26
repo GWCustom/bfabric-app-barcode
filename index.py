@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import utils.bfab_utils as fns
 from datetime import datetime as dt
+from utils.objects import Logger
 
 import bfabric
 from utils import auth_utils, components
@@ -188,7 +189,7 @@ def confirm(yes, data, sel, token):
 
             # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
             # asyncio.run(fns.update_bfabric(df, SUPERUSER))
-            run_async_in_background(fns.update_bfabric, df, SUPERUSER)
+            run_async_in_background(fns.update_bfabric, df, SUPERUSER, token)
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
                 
@@ -311,7 +312,8 @@ def load_new_order(load_reload, order_number, old):
         State("token", "data"),
         State("entity", "data"),
         State("bug-description", "value")
-    ]
+    ],
+    prevent_initial_call=True
 )
 def submit_bug_report(n_clicks, token, entity_data, bug_description):
 
@@ -320,18 +322,28 @@ def submit_bug_report(n_clicks, token, entity_data, bug_description):
     else:
         token_data = ""
 
+    jobId = token_data.get('jobId', None)
+    username = token_data.get("user_data", "None")
+
+    L = Logger(jobid=jobId, username=username)
+
     if n_clicks:
+        L.log_operation("bug report", "Initiating bug report submission process.", params=None, flush_logs=False)
         try:
             sending_result = auth_utils.send_bug_report(
                 token_data=token_data,
                 entity_data=entity_data,
                 description=bug_description
             )
+
             if sending_result:
+                L.log_operation("bug report", f"Bug report successfully submitted. | DESCRIPTION: {bug_description}", params=None, flush_logs=True)
                 return True, False
             else:
+                L.log_operation("bug report", "Failed to submit bug report!", params=None, flush_logs=True)
                 return False, True
         except:
+            L.log_operation("bug report", "Failed to submit bug report!", params=None, flush_logs=True)
             return False, True
 
     return False, False
@@ -352,7 +364,7 @@ def load_new_table(load_reload, order_number, old, order, token):
 
     if order_number is not None and order is not None:
         if load_reload <= 1 or int(order_number) != int(list(pd.read_json(order, orient='split')['order_number'])[0]):
-            df = fns.get_dataset(order_number, wrapper)
+            df = fns.get_dataset(order_number, wrapper, tdata)
             return df.to_json(date_format='iso', orient='split')
         else:
             df = pd.read_json(old, orient='split')
@@ -453,12 +465,29 @@ def startup_function(token):
         token_data = json.loads(auth_utils.token_to_data(token))
     else: 
         return []
+    
+    jobId = token_data.get('jobId', None)
+    username = token_data.get("user_data", "None")
+    L = Logger(jobid=jobId, username=username)
+
     Bfab = auth_utils.token_response_to_bfabric(token_data)
-    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
+
+    #res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
+
+    res = L.logthis(
+        api_call=Bfab.read,
+        endpoint="run",
+        obj={"id":token_data['entity_id_data']},
+        max_results=None,
+        flush_logs = False,
+    )
+
     orders = [
         item['id'] for item in res[0].get('container')
         if item.get('classname') == 'order'
     ]
+
+    L.log_operation("order input", f"Orders {orders} loaded successfully.", flush_logs=True)
         
     return [{'label': f'Order {order_id}', 'value': order_id} for order_id in orders]
 
@@ -538,4 +567,4 @@ def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,Rev
         return orig
 
 if __name__ == '__main__':
-    app.run_server(debug=False, port=PORT, host=HOST)
+    app.run_server(debug=True, port=PORT, host=HOST)
