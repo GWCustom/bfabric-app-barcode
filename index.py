@@ -12,7 +12,7 @@ import bfabric
 from utils import auth_utils, components
 
 from dash import callback_context as ctx
-import dash_table
+from dash import dash_table
 
 import asyncio
 import threading
@@ -129,7 +129,8 @@ app.layout = html.Div(
             ], style={"width":"100vw"},  
             fluid=True
         ),
-        
+        dcc.Store(id='transformations_applied_store', data = [], storage_type='session'),
+        dcc.Store(id='transformations_reset', storage_type='session'),
     ],style={"width":"100vw", "overflow-x":"hidden"}#, "overflow-y":"scroll"}
 )
 
@@ -150,12 +151,12 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
-
 @app.callback(
     output=[
         Output("alert-fade", "is_open"),
         Output("alert-fade-2", "is_open"),
-        Output("alert-fade-3", "is_open")
+        Output("alert-fade-3", "is_open"),
+        Output("transformations_reset", "data"),
     ],
     inputs=[
         Input('yes', 'n_clicks')
@@ -163,18 +164,24 @@ def toggle_modal(n1, n2, is_open):
     state=[
         State('edited', 'data'),
         State('selectedRows', 'data'),
-        State('token', 'data')
-    ],suppress_initial_call=True
+        State('token', 'data'),
+        State('transformations_applied_store', 'data')
+    ],
+    suppress_initial_call=True
 )
-def confirm(yes, data, sel, token):
+def confirm(yes, data, sel, token, transformations):
 
     updated, queued, not_updated = False, False, False
     token_data = json.loads(auth_utils.token_to_data(token))
     environ = token_data.get('environment', 'TEST') 
     environ = environ.upper()
+    transformations_reset = False
+
+    L = Logger(jobid=token_data.get('jobId', None), username= token_data.get("user_data", "None"))
 
     if not data:
-        return not_updated, queued, updated
+        L.log_operation("Error", "An error occured while updating the barcodes in B-Fabric.", params=None, flush_logs=True)
+        return not_updated, queued, updated, transformations_reset
 
     try:
         df = pd.read_json(data, orient='split')
@@ -189,9 +196,10 @@ def confirm(yes, data, sel, token):
 
             # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
             # asyncio.run(fns.update_bfabric(df, SUPERUSER))
-            run_async_in_background(fns.update_bfabric, df, SUPERUSER, token)
+            run_async_in_background(fns.update_bfabric, df, SUPERUSER, token_data, transformations)
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
+            transformations_reset = True
                 
     except Exception as e:
         print("-----------ERROR-----------")
@@ -199,7 +207,7 @@ def confirm(yes, data, sel, token):
 
         not_updated = True
 
-    return updated, queued, not_updated
+    return updated, queued, not_updated, transformations_reset
 
 @app.callback(output=Output('div-graphs-bc', 'children'),
               inputs=[Input('edited', 'data'),
@@ -492,53 +500,76 @@ def startup_function(token):
     return [{'label': f'Order {order_id}', 'value': order_id} for order_id in orders]
 
 
-@app.callback(output=Output('edited','data'),
-              inputs=[Input('load-val','n_clicks'),
-                      Input('original', 'data'),
-                      Input('update','n_clicks'),
-                      Input('Set1','n_clicks'),
-                      Input('Set2','n_clicks'),
-                      Input('RC1','n_clicks'),
-                      Input('RC2','n_clicks'),
-                      Input('RS1','n_clicks'),
-                      Input('RS2','n_clicks'),
-                      Input('swap','n_clicks'),
-                      Input('Tr1','n_clicks'),
-                      Input('Tr2','n_clicks')
-                      ],state=[State('reset_value', 'value'),
-                      State('edited', 'data'),
-                      State('selectedRows', 'data')])
-def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,RevSeq1,RevSeq2,swap,tr1,tr2,reset_barcode,loader,sel):
-
+@app.callback(
+    output=[
+        Output('edited', 'data'),
+        Output('transformations_applied_store', 'data')
+    ],
+    inputs=[
+        Input('load-val', 'n_clicks'),
+        Input('original', 'data'),
+        Input('update', 'n_clicks'),
+        Input('Set1', 'n_clicks'),
+        Input('Set2', 'n_clicks'),
+        Input('RC1', 'n_clicks'),
+        Input('RC2', 'n_clicks'),
+        Input('RS1', 'n_clicks'),
+        Input('RS2', 'n_clicks'),
+        Input('swap', 'n_clicks'),
+        Input('Tr1', 'n_clicks'),
+        Input('Tr2', 'n_clicks'),
+        Input('transformations_reset', 'data'),
+    ],
+    state=[
+        State('reset_value', 'value'),
+        State('edited', 'data'),
+        State('selectedRows', 'data'),
+        State('transformations_applied_store', 'data')
+    ],
+)
+def barcode_table(load_button, orig, update_button, Set1, Set2, RevComp1, RevComp2, RevSeq1, RevSeq2, swap, tr1, tr2, transformations_reset, reset_barcode, loader, sel, transformations_applied):
     send = html.Div()
 
+
+    print(transformations_reset)
+    if transformations_reset:
+        transformations_applied = []
+        transformations_reset = False
+
     button_clicked = ctx.triggered_id
-
     if button_clicked == "load-val":
-        return orig
+        return orig, transformations_applied
 
-    # df=pd.read_csv('temporary.csv')
     try:
         df = pd.read_json(loader, orient='split')
     except:
         df = pd.DataFrame()
+
     try:
         if button_clicked == 'RC1':
             df['Barcode 1'] = [fns.RC(list(df['Barcode 1'])[i]) if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("RevComp index 1")
+            print(transformations_applied)
         if button_clicked == 'RC2':
             df['Barcode 2'] = [fns.RC(list(df['Barcode 2'])[i]) if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
+            transformations_applied.append("RevComp index 2")
+            print(transformations_applied)
         if button_clicked == 'RS1':
             df['Barcode 1'] = [fns.RS(list(df['Barcode 1'])[i]) if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("RevSeq index 1")
+            print(transformations_applied)
         if button_clicked == 'RS2':
             df['Barcode 2'] = [fns.RS(list(df['Barcode 2'])[i]) if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
+            transformations_applied.append("RevSeq index 2")
+            print(transformations_applied)
         if button_clicked == 'Tr1':
             df['Barcode 1'] = [str(list(df['Barcode 1'])[i])[:-1] if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("Trim index 1")
         if button_clicked == 'Tr2':
             df['Barcode 2'] = [str(list(df['Barcode 2'])[i])[:-1] if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
-
-        if button_clicked == 'swap': #### TODO Fix for selections:
-            new_bc1 = []
-            new_bc2 = []
+            transformations_applied.append("Trim index 2")
+        if button_clicked == 'swap':#### TODO Fix for selections:
+            new_bc1, new_bc2 = [], []
             for i in range(len(list(df['Barcode 1']))):
                 if i in sel:
                     new_bc1.append(list(df['Barcode 2'])[i])
@@ -546,25 +577,30 @@ def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,Rev
                 else:
                     new_bc2.append(list(df['Barcode 2'])[i])
                     new_bc1.append(list(df['Barcode 1'])[i])
-            df['Barcode 1'] = new_bc1
-            df['Barcode 2'] = new_bc2
+            df['Barcode 1'], df['Barcode 2'] = new_bc1, new_bc2
             # placeholder = list(df['Barcode 1'])[:]
             # df['Barcode 1'] = df['Barcode 2']
             # df['Barcode 2'] = placeholder
+            transformations_applied.append("Swap Indices")
         if button_clicked == 'Set1':
             if type(None) != type(reset_barcode):
                 df['Barcode 1'] = [reset_barcode if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
             else:
-                df['Barcode 1'] = ["" for i in list(df['Barcode 1'])]
+                df['Barcode 1'] = ["" for _ in list(df['Barcode 1'])]
+            transformations_applied.append("Set index 1")
         if button_clicked == 'Set2':
             if type(None) != type(reset_barcode):
                 df['Barcode 2'] = [reset_barcode if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
             else:
                 df['Barcode 2'] = ["" if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
-        return df.to_json(date_format='iso', orient='split')
+            transformations_applied.append("Set index 2")
+        return df.to_json(date_format='iso', orient='split'), transformations_applied
 
-    except:
-        return orig
+    except Exception as e:
+        #Add Log and User Error?
+        print("Error occurred:", e)
+        return orig, transformations_applied
+
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=PORT, host=HOST)

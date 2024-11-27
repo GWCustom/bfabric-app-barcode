@@ -84,7 +84,7 @@ def RS(barcode):
     else:
         return barcode
 
-async def update_bfabric(df, B=None, token_data=None):
+async def update_bfabric(df, B=None, token_data=None, transformations=None):
 
     ress = []
     ids = list(df['Sample ID'])
@@ -114,22 +114,22 @@ async def update_bfabric(df, B=None, token_data=None):
                  "multiplexid2dmx":str(bc2[i+itr*100])
                 }
             )
-            
-        #res = B.save(endpoint="sample", obj=objs)
+
+        sample_objs = objs[:5]    
+        params = f"Sample Objects: {sample_objs}, Transformations used: {transformations}"
 
         res = L.logthis(
             api_call=B.save,
             endpoint="sample",
             obj=objs,
-            params="ToDo",
+            params=params,
             flush_logs = False,
         )
-
 
         ress += res
 
         if "errorreport" in str(res[0]):
-            L.log_operation("Error", f"Error in updating B-Fabric: {res[0]}", flush_logs=False)
+            L.log_operation("Error", f"Error in updating B-Fabric: {res[0]}", flush_logs=True)
             raise Exception(f"Error in updating B-Fabric: {res[0]}")
 
     L.flush_logs()
