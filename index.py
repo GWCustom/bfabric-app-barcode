@@ -597,4 +597,4 @@ def barcode_table(load_button, orig, update_button, Set1, Set2, RevComp1, RevCom
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=PORT, host=HOST)
+    app.run_server(debug=False, port=PORT, host=HOST)
