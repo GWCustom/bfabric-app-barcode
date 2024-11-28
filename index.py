@@ -130,7 +130,6 @@ app.layout = html.Div(
             fluid=True
         ),
         dcc.Store(id='transformations_applied_store', data = [], storage_type='session'),
-        dcc.Store(id='transformations_reset', storage_type='session'),
     ],style={"width":"100vw", "overflow-x":"hidden"}#, "overflow-y":"scroll"}
 )
 
@@ -156,7 +155,7 @@ def toggle_modal(n1, n2, is_open):
         Output("alert-fade", "is_open"),
         Output("alert-fade-2", "is_open"),
         Output("alert-fade-3", "is_open"),
-        Output("transformations_reset", "data"),
+        Output("transformations_applied_store", "data", allow_duplicate=True),
     ],
     inputs=[
         Input('yes', 'n_clicks')
@@ -167,7 +166,7 @@ def toggle_modal(n1, n2, is_open):
         State('token', 'data'),
         State('transformations_applied_store', 'data')
     ],
-    suppress_initial_call=True
+    prevent_initial_call=True
 )
 def confirm(yes, data, sel, token, transformations):
 
@@ -175,13 +174,12 @@ def confirm(yes, data, sel, token, transformations):
     token_data = json.loads(auth_utils.token_to_data(token))
     environ = token_data.get('environment', 'TEST') 
     environ = environ.upper()
-    transformations_reset = False
 
     L = Logger(jobid=token_data.get('jobId', None), username= token_data.get("user_data", "None"))
 
     if not data:
         L.log_operation("Error", "An error occured while updating the barcodes in B-Fabric.", params=None, flush_logs=True)
-        return not_updated, queued, updated, transformations_reset
+        return not_updated, queued, updated, transformations
 
     try:
         df = pd.read_json(data, orient='split')
@@ -199,15 +197,17 @@ def confirm(yes, data, sel, token, transformations):
             run_async_in_background(fns.update_bfabric, df, SUPERUSER, token_data, transformations)
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
-            transformations_reset = True
-                
+
+            transformations = []
+
+        
     except Exception as e:
         print("-----------ERROR-----------")
         print(e) 
 
         not_updated = True
 
-    return updated, queued, not_updated, transformations_reset
+    return updated, queued, not_updated, transformations
 
 @app.callback(output=Output('div-graphs-bc', 'children'),
               inputs=[Input('edited', 'data'),
@@ -503,7 +503,7 @@ def startup_function(token):
 @app.callback(
     output=[
         Output('edited', 'data'),
-        Output('transformations_applied_store', 'data')
+        Output('transformations_applied_store', 'data', allow_duplicate=True)
     ],
     inputs=[
         Input('load-val', 'n_clicks'),
@@ -518,7 +518,6 @@ def startup_function(token):
         Input('swap', 'n_clicks'),
         Input('Tr1', 'n_clicks'),
         Input('Tr2', 'n_clicks'),
-        Input('transformations_reset', 'data'),
     ],
     state=[
         State('reset_value', 'value'),
@@ -526,15 +525,10 @@ def startup_function(token):
         State('selectedRows', 'data'),
         State('transformations_applied_store', 'data')
     ],
+    prevent_initial_call=True
 )
-def barcode_table(load_button, orig, update_button, Set1, Set2, RevComp1, RevComp2, RevSeq1, RevSeq2, swap, tr1, tr2, transformations_reset, reset_barcode, loader, sel, transformations_applied):
+def barcode_table(load_button, orig, update_button, Set1, Set2, RevComp1, RevComp2, RevSeq1, RevSeq2, swap, tr1, tr2, reset_barcode, loader, sel, transformations_applied):
     send = html.Div()
-
-
-    print(transformations_reset)
-    if transformations_reset:
-        transformations_applied = []
-        transformations_reset = False
 
     button_clicked = ctx.triggered_id
     if button_clicked == "load-val":

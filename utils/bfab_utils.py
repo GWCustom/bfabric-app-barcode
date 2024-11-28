@@ -114,9 +114,8 @@ async def update_bfabric(df, B=None, token_data=None, transformations=None):
                  "multiplexid2dmx":str(bc2[i+itr*100])
                 }
             )
-
-        sample_objs = objs[:5]    
-        params = f"Sample Objects: {sample_objs}, Transformations used: {transformations}"
+  
+        params = f"Transformations used: {transformations}"
 
         res = L.logthis(
             api_call=B.save,
