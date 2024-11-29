@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 import pandas as pd
-import dash_table
+from dash import dash_table
 
 DEVELOPER_EMAIL = "griffin@gwcustom.com"
 

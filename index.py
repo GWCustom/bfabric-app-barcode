@@ -6,12 +6,13 @@ import pandas as pd
 import os
 import utils.bfab_utils as fns
 from datetime import datetime as dt
+from utils.objects import Logger
 
 import bfabric
 from utils import auth_utils, components
 
 from dash import callback_context as ctx
-import dash_table
+from dash import dash_table
 
 import asyncio
 import threading
@@ -128,7 +129,7 @@ app.layout = html.Div(
             ], style={"width":"100vw"},  
             fluid=True
         ),
-        
+        dcc.Store(id='transformations_applied_store', data = [], storage_type='session'),
     ],style={"width":"100vw", "overflow-x":"hidden"}#, "overflow-y":"scroll"}
 )
 
@@ -149,12 +150,12 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
-
 @app.callback(
     output=[
         Output("alert-fade", "is_open"),
         Output("alert-fade-2", "is_open"),
-        Output("alert-fade-3", "is_open")
+        Output("alert-fade-3", "is_open"),
+        Output("transformations_applied_store", "data", allow_duplicate=True),
     ],
     inputs=[
         Input('yes', 'n_clicks')
@@ -162,18 +163,26 @@ def toggle_modal(n1, n2, is_open):
     state=[
         State('edited', 'data'),
         State('selectedRows', 'data'),
-        State('token', 'data')
-    ],suppress_initial_call=True
+        State('token', 'data'),
+        State('transformations_applied_store', 'data')
+    ],
+    prevent_initial_call=True
 )
-def confirm(yes, data, sel, token):
+def confirm(yes, data, sel, token, transformations):
 
     updated, queued, not_updated = False, False, False
     token_data = json.loads(auth_utils.token_to_data(token))
     environ = token_data.get('environment', 'TEST') 
     environ = environ.upper()
 
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
+
     if not data:
-        return not_updated, queued, updated
+        L.log_operation("Error", "An error occured while updating the barcodes in B-Fabric.", params=None, flush_logs=True)
+        return not_updated, queued, updated, transformations
 
     try:
         df = pd.read_json(data, orient='split')
@@ -188,17 +197,20 @@ def confirm(yes, data, sel, token):
 
             # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
             # asyncio.run(fns.update_bfabric(df, SUPERUSER))
-            run_async_in_background(fns.update_bfabric, df, SUPERUSER)
+            run_async_in_background(fns.update_bfabric, df, SUPERUSER, token_data, transformations)
             # fns.update_bfabric(df, SUPERUSER) 
             updated = True
-                
+
+            transformations = []
+
+        
     except Exception as e:
         print("-----------ERROR-----------")
         print(e) 
 
         not_updated = True
 
-    return updated, queued, not_updated
+    return updated, queued, not_updated, transformations
 
 @app.callback(output=Output('div-graphs-bc', 'children'),
               inputs=[Input('edited', 'data'),
@@ -311,7 +323,8 @@ def load_new_order(load_reload, order_number, old):
         State("token", "data"),
         State("entity", "data"),
         State("bug-description", "value")
-    ]
+    ],
+    prevent_initial_call=True
 )
 def submit_bug_report(n_clicks, token, entity_data, bug_description):
 
@@ -320,18 +333,31 @@ def submit_bug_report(n_clicks, token, entity_data, bug_description):
     else:
         token_data = ""
 
+    jobId = token_data.get('jobId', None)
+    username = token_data.get("user_data", "None")
+
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
+
     if n_clicks:
+        L.log_operation("bug report", "Initiating bug report submission process.", params=None, flush_logs=False)
         try:
             sending_result = auth_utils.send_bug_report(
                 token_data=token_data,
                 entity_data=entity_data,
                 description=bug_description
             )
+
             if sending_result:
+                L.log_operation("bug report", f"Bug report successfully submitted. | DESCRIPTION: {bug_description}", params=None, flush_logs=True)
                 return True, False
             else:
+                L.log_operation("bug report", "Failed to submit bug report!", params=None, flush_logs=True)
                 return False, True
         except:
+            L.log_operation("bug report", "Failed to submit bug report!", params=None, flush_logs=True)
             return False, True
 
     return False, False
@@ -352,7 +378,7 @@ def load_new_table(load_reload, order_number, old, order, token):
 
     if order_number is not None and order is not None:
         if load_reload <= 1 or int(order_number) != int(list(pd.read_json(order, orient='split')['order_number'])[0]):
-            df = fns.get_dataset(order_number, wrapper)
+            df = fns.get_dataset(order_number, wrapper, tdata)
             return df.to_json(date_format='iso', orient='split')
         else:
             df = pd.read_json(old, orient='split')
@@ -453,63 +479,98 @@ def startup_function(token):
         token_data = json.loads(auth_utils.token_to_data(token))
     else: 
         return []
+    
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
+
     Bfab = auth_utils.token_response_to_bfabric(token_data)
-    res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
+
+    #res = Bfab.read(endpoint="run", obj={"id":token_data['entity_id_data']}, max_results=None)
+
+    res = L.logthis(
+        api_call=Bfab.read,
+        endpoint="run",
+        obj={"id":token_data['entity_id_data']},
+        max_results=None,
+        flush_logs = False,
+    )
+
     orders = [
         item['id'] for item in res[0].get('container')
         if item.get('classname') == 'order'
     ]
+
+    L.log_operation("order input", f"Orders {orders} loaded successfully.", flush_logs=True)
         
     return [{'label': f'Order {order_id}', 'value': order_id} for order_id in orders]
 
 
-@app.callback(output=Output('edited','data'),
-              inputs=[Input('load-val','n_clicks'),
-                      Input('original', 'data'),
-                      Input('update','n_clicks'),
-                      Input('Set1','n_clicks'),
-                      Input('Set2','n_clicks'),
-                      Input('RC1','n_clicks'),
-                      Input('RC2','n_clicks'),
-                      Input('RS1','n_clicks'),
-                      Input('RS2','n_clicks'),
-                      Input('swap','n_clicks'),
-                      Input('Tr1','n_clicks'),
-                      Input('Tr2','n_clicks')
-                      ],state=[State('reset_value', 'value'),
-                      State('edited', 'data'),
-                      State('selectedRows', 'data')])
-def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,RevSeq1,RevSeq2,swap,tr1,tr2,reset_barcode,loader,sel):
-
+@app.callback(
+    output=[
+        Output('edited', 'data'),
+        Output('transformations_applied_store', 'data', allow_duplicate=True)
+    ],
+    inputs=[
+        Input('load-val', 'n_clicks'),
+        Input('original', 'data'),
+        Input('update', 'n_clicks'),
+        Input('Set1', 'n_clicks'),
+        Input('Set2', 'n_clicks'),
+        Input('RC1', 'n_clicks'),
+        Input('RC2', 'n_clicks'),
+        Input('RS1', 'n_clicks'),
+        Input('RS2', 'n_clicks'),
+        Input('swap', 'n_clicks'),
+        Input('Tr1', 'n_clicks'),
+        Input('Tr2', 'n_clicks'),
+    ],
+    state=[
+        State('reset_value', 'value'),
+        State('edited', 'data'),
+        State('selectedRows', 'data'),
+        State('transformations_applied_store', 'data')
+    ],
+    prevent_initial_call=True
+)
+def barcode_table(load_button, orig, update_button, Set1, Set2, RevComp1, RevComp2, RevSeq1, RevSeq2, swap, tr1, tr2, reset_barcode, loader, sel, transformations_applied):
     send = html.Div()
 
     button_clicked = ctx.triggered_id
-
     if button_clicked == "load-val":
-        return orig
+        return orig, transformations_applied
 
-    # df=pd.read_csv('temporary.csv')
     try:
         df = pd.read_json(loader, orient='split')
     except:
         df = pd.DataFrame()
+
     try:
         if button_clicked == 'RC1':
             df['Barcode 1'] = [fns.RC(list(df['Barcode 1'])[i]) if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("RevComp index 1")
+            print(transformations_applied)
         if button_clicked == 'RC2':
             df['Barcode 2'] = [fns.RC(list(df['Barcode 2'])[i]) if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
+            transformations_applied.append("RevComp index 2")
+            print(transformations_applied)
         if button_clicked == 'RS1':
             df['Barcode 1'] = [fns.RS(list(df['Barcode 1'])[i]) if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("RevSeq index 1")
+            print(transformations_applied)
         if button_clicked == 'RS2':
             df['Barcode 2'] = [fns.RS(list(df['Barcode 2'])[i]) if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
+            transformations_applied.append("RevSeq index 2")
+            print(transformations_applied)
         if button_clicked == 'Tr1':
             df['Barcode 1'] = [str(list(df['Barcode 1'])[i])[:-1] if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
+            transformations_applied.append("Trim index 1")
         if button_clicked == 'Tr2':
             df['Barcode 2'] = [str(list(df['Barcode 2'])[i])[:-1] if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
-
-        if button_clicked == 'swap': #### TODO Fix for selections:
-            new_bc1 = []
-            new_bc2 = []
+            transformations_applied.append("Trim index 2")
+        if button_clicked == 'swap':#### TODO Fix for selections:
+            new_bc1, new_bc2 = [], []
             for i in range(len(list(df['Barcode 1']))):
                 if i in sel:
                     new_bc1.append(list(df['Barcode 2'])[i])
@@ -517,25 +578,30 @@ def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,Rev
                 else:
                     new_bc2.append(list(df['Barcode 2'])[i])
                     new_bc1.append(list(df['Barcode 1'])[i])
-            df['Barcode 1'] = new_bc1
-            df['Barcode 2'] = new_bc2
+            df['Barcode 1'], df['Barcode 2'] = new_bc1, new_bc2
             # placeholder = list(df['Barcode 1'])[:]
             # df['Barcode 1'] = df['Barcode 2']
             # df['Barcode 2'] = placeholder
+            transformations_applied.append("Swap Indices")
         if button_clicked == 'Set1':
             if type(None) != type(reset_barcode):
                 df['Barcode 1'] = [reset_barcode if i in sel else list(df['Barcode 1'])[i] for i in range(len(list(df['Barcode 1'])))]
             else:
-                df['Barcode 1'] = ["" for i in list(df['Barcode 1'])]
+                df['Barcode 1'] = ["" for _ in list(df['Barcode 1'])]
+            transformations_applied.append("Set index 1")
         if button_clicked == 'Set2':
             if type(None) != type(reset_barcode):
                 df['Barcode 2'] = [reset_barcode if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
             else:
                 df['Barcode 2'] = ["" if i in sel else list(df['Barcode 2'])[i] for i in range(len(list(df['Barcode 2'])))]
-        return df.to_json(date_format='iso', orient='split')
+            transformations_applied.append("Set index 2")
+        return df.to_json(date_format='iso', orient='split'), transformations_applied
 
-    except:
-        return orig
+    except Exception as e:
+        #Add Log and User Error?
+        print("Error occurred:", e)
+        return orig, transformations_applied
+
 
 if __name__ == '__main__':
     app.run_server(debug=False, port=PORT, host=HOST)

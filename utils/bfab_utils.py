@@ -1,9 +1,26 @@
 import pandas as pd
+from utils.objects import Logger
 
-def get_dataset(order_number, B):
+def get_dataset(order_number, B, token_data):
     bc1s, bc2s, ids, names, tubeids = [], [], [], [], []
+
+
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
     
-    results = B.read(endpoint="sample", obj={"containerid": str(order_number)}, max_results=None)
+    #results = B.read(endpoint="sample", obj={"containerid": str(order_number)}, max_results=None)
+
+    results = L.logthis(
+                api_call=B.read,
+                endpoint="sample",
+                obj={"containerid": str(order_number)},
+                max_results=None,
+                params=f"Orders Loaded: {order_number}",
+                flush_logs = True
+    )
+
     samples = results.get_first_n_results(None)
 
     for sample in samples:
@@ -67,7 +84,7 @@ def RS(barcode):
     else:
         return barcode
 
-async def update_bfabric(df, B=None):
+async def update_bfabric(df, B=None, token_data=None, transformations=None):
 
     ress = []
     ids = list(df['Sample ID'])
@@ -78,7 +95,17 @@ async def update_bfabric(df, B=None):
     bc2 = [''.join(sentence.split()) for sentence in bc2]
     n_itr = (len(ids) // 100) + 1
 
+    jobId = token_data.get('jobId', None)
+    username = token_data.get("user_data", "None")
+
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
+    
+    print("Before for loop")
     for itr in range(n_itr):
+        print(f"Inside for loop, iteration {itr}")
         print(f"Updating {itr*100} to {(itr+1)*100} samples")
         objs = []
         for i in range(100):
@@ -91,11 +118,22 @@ async def update_bfabric(df, B=None):
                  "multiplexid2dmx":str(bc2[i+itr*100])
                 }
             )
-            
-        res = B.save(endpoint="sample", obj=objs)
+  
+        params = f"Transformations used: {transformations}"
+
+        res = L.logthis(
+            api_call=B.save,
+            endpoint="sample",
+            obj=objs,
+            params=params,
+            flush_logs = False,
+        )
+
         ress += res
 
         if "errorreport" in str(res[0]):
+            L.log_operation("Error", f"Error in updating B-Fabric: {res[0]}", flush_logs=True)
             raise Exception(f"Error in updating B-Fabric: {res[0]}")
 
+    L.flush_logs()
     return ress

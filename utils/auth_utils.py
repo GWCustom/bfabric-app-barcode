@@ -8,6 +8,7 @@ import os
 import bfabric
 from bfabric import BfabricAuth
 from bfabric import BfabricClientConfig
+from utils.objects import Logger
 
 
 VALIDATION_URL = "https://fgcz-bfabric.uzh.ch/bfabric/rest/token/validate?token="
@@ -54,7 +55,8 @@ def token_to_data(token: str) -> str:
             webbase_data = environment_dict.get(userinfo['environment'], None),
             application_params_data = {},
             application_data = str(userinfo['applicationId']),
-            userWsPassword = userinfo['userWsPassword']
+            userWsPassword = userinfo['userWsPassword'],
+            jobId = userinfo['jobId']
         )
 
         return json.dumps(token_data)
@@ -93,9 +95,24 @@ def entity_data(token_data: dict) -> str:
     entity_class = token_data.get('entityClass_data', None)
     endpoint = entity_class_map.get(entity_class, None)
     entity_id = token_data.get('entity_id_data', None)
+    jobId = token_data.get('jobId', None)
+    username = token_data.get("user_data", "None")
+    environment = token_data.get("environment", "None")
 
     if wrapper and entity_class and endpoint and entity_id:
-        entity_data_dict = wrapper.read(endpoint=endpoint, obj={"id": entity_id}, max_results=None)[0]
+
+        L = Logger(
+            jobid = jobId,
+            username= username,
+            environment= environment)
+
+        entity_data_dict = L.logthis(
+            api_call=wrapper.read,
+            endpoint=endpoint,
+            obj={"id": entity_id},
+            max_results=None,
+            flush_logs = True
+        )[0]
         
         if entity_data_dict:
             json_data = json.dumps({
@@ -106,7 +123,12 @@ def entity_data(token_data: dict) -> str:
             })
             return json_data
         else:
-            return None
+            L.log_operation(
+                "entity_data",
+                "Entity data retrieval failed or returned None.",
+                params=None,
+                flush_logs=True
+            )
     else:
         return None
 
