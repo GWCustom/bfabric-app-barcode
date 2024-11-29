@@ -175,7 +175,10 @@ def confirm(yes, data, sel, token, transformations):
     environ = token_data.get('environment', 'TEST') 
     environ = environ.upper()
 
-    L = Logger(jobid=token_data.get('jobId', None), username= token_data.get("user_data", "None"))
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
 
     if not data:
         L.log_operation("Error", "An error occured while updating the barcodes in B-Fabric.", params=None, flush_logs=True)
@@ -333,7 +336,10 @@ def submit_bug_report(n_clicks, token, entity_data, bug_description):
     jobId = token_data.get('jobId', None)
     username = token_data.get("user_data", "None")
 
-    L = Logger(jobid=jobId, username=username)
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
 
     if n_clicks:
         L.log_operation("bug report", "Initiating bug report submission process.", params=None, flush_logs=False)
@@ -474,9 +480,10 @@ def startup_function(token):
     else: 
         return []
     
-    jobId = token_data.get('jobId', None)
-    username = token_data.get("user_data", "None")
-    L = Logger(jobid=jobId, username=username)
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
 
     Bfab = auth_utils.token_response_to_bfabric(token_data)
 

@@ -5,10 +5,10 @@ def get_dataset(order_number, B, token_data):
     bc1s, bc2s, ids, names, tubeids = [], [], [], [], []
 
 
-    jobId = token_data.get('jobId', None)
-    username = token_data.get("user_data", "None")
-
-    L = Logger(jobid=jobId, username=username)
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
     
     #results = B.read(endpoint="sample", obj={"containerid": str(order_number)}, max_results=None)
 
@@ -98,7 +98,11 @@ async def update_bfabric(df, B=None, token_data=None, transformations=None):
     jobId = token_data.get('jobId', None)
     username = token_data.get("user_data", "None")
 
-    L = Logger(jobid=jobId, username=username)
+    L = Logger(
+    jobid = token_data.get('jobId', None),
+    username= token_data.get("user_data", "None"),
+    environment= token_data.get("environment", "None"))
+    
     print("Before for loop")
     for itr in range(n_itr):
         print(f"Inside for loop, iteration {itr}")
