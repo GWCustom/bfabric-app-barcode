@@ -42,8 +42,10 @@ def token_to_data(token: str) -> str:
 
         if not five_minutes_later <= datetime.datetime.strptime(expiry_time, "%Y-%m-%d %H:%M:%S"):
             return "EXPIRED"
+
+        envioronment_name = str(userinfo['environment']).strip().lower()
+        environment_dict = {"production":"https://fgcz-bfabric.uzh.ch/bfabric","prod":"https://fgcz-bfabric.uzh.ch/bfabric","test":"https://fgcz-bfabric-test.uzh.ch/bfabric"}
         
-        environment_dict = {"Production":"https://fgcz-bfabric.uzh.ch/bfabric","TEST":"https://fgcz-bfabric-test.uzh.ch/bfabric"}
 
         token_data = dict(
             environment = userinfo['environment'],
@@ -51,7 +53,7 @@ def token_to_data(token: str) -> str:
             token_expires = expiry_time,
             entity_id_data = userinfo['entityId'],
             entityClass_data = userinfo['entityClassName'],
-            webbase_data = environment_dict.get(userinfo['environment'], None),
+            webbase_data = environment_dict[envioronment_name],
             application_params_data = {},
             application_data = str(userinfo['applicationId']),
             userWsPassword = userinfo['userWsPassword']
@@ -63,7 +65,7 @@ def token_to_data(token: str) -> str:
 def token_response_to_bfabric(token_response: dict) -> str:
 
     bfabric_auth = BfabricAuth(login=token_response.get('user_data'), password=token_response.get('userWsPassword'))
-    bfabric_client_config = BfabricClientConfig(base_url=token_response.get('webbase_data')) 
+    bfabric_client_config = BfabricClientConfig(base_url=token_response['webbase_data'])
 
     bfabric_wrapper = bfabric.Bfabric(config=bfabric_client_config, auth=bfabric_auth)
 
