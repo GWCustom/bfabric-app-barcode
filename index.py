@@ -18,15 +18,13 @@ import threading
 
 if os.path.exists("./PARAMS.py"):
     try:
-        from PARAMS import PORT, HOST, DEV
+        from PARAMS import PORT, HOST
     except:
         PORT = 8050
         HOST = 'localhost'
-        DEV = True
 else:
     PORT = 8050
     HOST = 'localhost'
-    DEV = True
     
 
 def run_async_in_background(coroutine_func, *args):
@@ -166,39 +164,42 @@ def toggle_modal(n1, n2, is_open):
     ],suppress_initial_call=True
 )
 def confirm(yes, data, sel, token):
+    
+    if token:
+        updated, queued, not_updated = False, False, False
+        token_data = json.loads(auth_utils.token_to_data(token))
+        environ = token_data.get('environment', 'TEST') 
+        environ = environ.upper()
 
-    updated, queued, not_updated = False, False, False
-    token_data = json.loads(auth_utils.token_to_data(token))
-    environ = token_data.get('environment', 'TEST') 
-    environ = environ.upper()
+        if not data:
+            return not_updated, queued, updated
 
-    if not data:
-        return not_updated, queued, updated
+        try:
+            df = pd.read_json(data, orient='split')
+            df = df.iloc[sel, :]
+            button_clicked = ctx.triggered_id
 
-    try:
-        df = pd.read_json(data, orient='split')
-        df = df.iloc[sel, :]
-        button_clicked = ctx.triggered_id
+            if button_clicked == 'yes' and yes > 0:
 
-        if button_clicked == 'yes' and yes > 0:
+                # Here we update using the gfeeder credentials, since the user rarely has 
+                # Sufficient permissions to edit the objects. 
+                SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
 
-            # Here we update using the gfeeder credentials, since the user rarely has 
-            # Sufficient permissions to edit the objects. 
-            SUPERUSER = bfabric.Bfabric.from_config(config_env=environ)
+                # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
+                # asyncio.run(fns.update_bfabric(df, SUPERUSER))
+                run_async_in_background(fns.update_bfabric, df, SUPERUSER)
+                # fns.update_bfabric(df, SUPERUSER) 
+                updated = True
+                    
+        except Exception as e:
+            print("-----------ERROR-----------")
+            print(e) 
 
-            # now we make fns.update_bfabric call, but do not await it. . . run asyncronously. 
-            # asyncio.run(fns.update_bfabric(df, SUPERUSER))
-            run_async_in_background(fns.update_bfabric, df, SUPERUSER)
-            # fns.update_bfabric(df, SUPERUSER) 
-            updated = True
-                
-    except Exception as e:
-        print("-----------ERROR-----------")
-        print(e) 
+            not_updated = True
 
-        not_updated = True
-
-    return updated, queued, not_updated
+        return updated, queued, not_updated
+    else:
+        return False, False, False
 
 @app.callback(output=Output('div-graphs-bc', 'children'),
               inputs=[Input('edited', 'data'),
@@ -418,27 +419,24 @@ def display_page(url_params):
             return token, None, None, components.no_entity, page_title, *(True for _ in range(14)), session_details
         
         else:
-            if not DEV:
-                session_details = [
-                    html.P([
-                        html.B("Entity Name: "), entity_data['name'],
-                        html.Br(),
-                        html.B("Entity Class: "), tdata['entityClass_data'],
-                        html.Br(),
-                        html.B("Environment: "), tdata['environment'],
-                        html.Br(),
-                        html.B("Entity ID: "), tdata['entity_id_data'],
-                        html.Br(),
-                        html.B("User Name: "), tdata['user_data'],
-                        html.Br(),
-                        html.B("Session Expires: "), tdata['token_expires'],
-                        html.Br(),
-                        html.B("Current Time: "), str(dt.now().strftime("%Y-%m-%d %H:%M:%S"))
-                    ])
-                ]
-                return token, tdata, entity_data, components.auth, page_title, *(False for _ in range(14)), session_details
-            else: 
-                return token, tdata, entity_data, components.dev, page_title, *(True for _ in range(14)), session_details
+            session_details = [
+                html.P([
+                    html.B("Entity Name: "), entity_data['name'],
+                    html.Br(),
+                    html.B("Entity Class: "), tdata['entityClass_data'],
+                    html.Br(),
+                    html.B("Environment: "), tdata['environment'],
+                    html.Br(),
+                    html.B("Entity ID: "), tdata['entity_id_data'],
+                    html.Br(),
+                    html.B("User Name: "), tdata['user_data'],
+                    html.Br(),
+                    html.B("Session Expires: "), tdata['token_expires'],
+                    html.Br(),
+                    html.B("Current Time: "), str(dt.now().strftime("%Y-%m-%d %H:%M:%S"))
+                ])
+            ]
+            return token, tdata, entity_data, components.auth, page_title, *(False for _ in range(14)), session_details
     else: 
         return None, None, None, components.no_auth, base_title, *(True for _ in range(14)), session_details
 
@@ -538,4 +536,4 @@ def barcode_table(load_button,orig,update_button,Set1,Set2,RevComp1,RevComp2,Rev
         return orig
 
 if __name__ == '__main__':
-    app.run_server(debug=False, port=PORT, host=HOST)
+    app.run(debug=False, port=PORT, host=HOST)

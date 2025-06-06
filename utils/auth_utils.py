@@ -43,7 +43,7 @@ def token_to_data(token: str) -> str:
         if not five_minutes_later <= datetime.datetime.strptime(expiry_time, "%Y-%m-%d %H:%M:%S"):
             return "EXPIRED"
         
-        environment_dict = {"Production":"https://fgcz-bfabric.uzh.ch/bfabric","Test":"https://fgcz-bfabric-test.uzh.ch/bfabric"}
+        environment_dict = {"Production":"https://fgcz-bfabric.uzh.ch/bfabric","TEST":"https://fgcz-bfabric-test.uzh.ch/bfabric"}
 
         token_data = dict(
             environment = userinfo['environment'],
