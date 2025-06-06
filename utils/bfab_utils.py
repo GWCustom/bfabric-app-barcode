@@ -18,9 +18,14 @@ def get_dataset(order_number, B):
         "Sample ID": ids,
         "Tube ID": tubeids,
         "Name": names,
+        "orig Barcode 1": bc1s,
+        "orig Barcode 2": bc2s,
         "Barcode 1": bc1s,
         "Barcode 2": bc2s
     })
+
+    cols = ["Sample ID", "Tube ID", "Name", "Barcode 1", "orig Barcode 1", "Barcode 2", "orig Barcode 2"]
+    final = final[cols]
     final = final.sort_values(by=['Sample ID'], ascending=True)
 
     return final

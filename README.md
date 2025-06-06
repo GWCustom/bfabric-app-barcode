@@ -53,7 +53,6 @@ pip install -r requirements.txt
 # PARAMS.py
 HOST = "0.0.0.0"
 PORT = 8050
-DEV = False
 ```
 
 7) Run the application 
